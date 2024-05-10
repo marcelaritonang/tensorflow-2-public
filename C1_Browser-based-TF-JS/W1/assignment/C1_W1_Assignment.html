@@ -11,9 +11,11 @@
             // HINT: Remember that you are trying to build a classifier that 
             // can predict from the data whether the diagnosis is malignant or benign.
             const trainingData = tf.data.csv(trainingUrl, {
-                
-                // YOUR CODE HERE
-                
+                columnConfigs: {
+                    diagnosis: {
+                        isLabel: true
+                    }
+                }
             });
             
             // Convert the training data into arrays in the space below.
@@ -21,7 +23,7 @@
             // Therefore, there is no need to convert string labels into
             // a one-hot encoded array of label values like we did in the
             // Iris dataset example. 
-            const convertedTrainingData = // YOUR CODE HERE
+            const convertedTrainingData = await trainingData.toArray();
                   
             const testingUrl = '/data/wdbc-test.csv';
             
@@ -30,9 +32,11 @@
             // HINT: Remember that you are trying to build a classifier that 
             // can predict from the data whether the diagnosis is malignant or benign.
             const testingData = tf.data.csv(testingUrl, {
-                
-                // YOUR CODE HERE
-                
+                columnConfigs: {
+                    diagnosis: {
+                        isLabel: true
+                    }
+                }
             });
             
             // Convert the testing data into arrays in the space below.
@@ -40,13 +44,13 @@
             // Therefore, there is no need to convert string labels into
             // a one-hot encoded array of label values like we did in the
             // Iris dataset example. 
-            const convertedTestingData = // YOUR CODE HERE
+            const convertedTestingData = await testingData.toArray();
                   
 
             // Specify the number of features in the space below.
             // HINT: You can get the number of features from the number of columns
             // and the number of labels in the training data. 
-            const numOfFeatures = // YOUR CODE HERE
+            const numOfFeatures = convertedTrainingData[0].length - 1;
             
                 
             // In the space below create a neural network that predicts 1 if the diagnosis is malignant
@@ -59,18 +63,27 @@
             // hidden layers should be enough to get a high accuracy.  
             const model = tf.sequential();
             
-            // YOUR CODE HERE
-
-            
+            // Add an input layer
+            model.add(tf.layers.dense({inputShape: [numOfFeatures], units: 64, activation: 'relu'}));
+            // Add a hidden layer
+            model.add(tf.layers.dense({units: 32, activation: 'relu'}));
+            // Add the output layer
+            model.add(tf.layers.dense({units: 1, activation: 'sigmoid'}));
             
             // Compile the model using the binaryCrossentropy loss, 
             // the rmsprop optimizer, and accuracy for your metrics. 
-            model.compile(// YOUR CODE HERE);
+            model.compile({
+                loss: 'binaryCrossentropy',
+                optimizer: 'rmsprop',
+                metrics: ['accuracy']
+            });
             
             
-            await model.fitDataset(convertedTrainingData, 
+            await model.fit(tf.tensor(convertedTrainingData.map(record => record.slice(1))), 
+                             tf.tensor(convertedTrainingData.map(record => record[0])),
                              {epochs:100,
-                              validationData: convertedTestingData,
+                              validationData: [tf.tensor(convertedTestingData.map(record => record.slice(1))), 
+                                               tf.tensor(convertedTestingData.map(record => record[0]))],
                               callbacks:{
                                   onEpochEnd: async(epoch, logs) =>{
                                       console.log("Epoch: " + epoch + " Loss: " + logs.loss + " Accuracy: " + logs.acc);
